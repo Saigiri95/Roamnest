@@ -1,0 +1,287 @@
+console.log(process.env) 
+// TO KNOW ABOUT ALL DATA
+pk.eyJ1IjoiZGVsdGEtc3R1ZHVlbnQiLCJhIjoiY2xvMDk
+0MTVhMTJ3ZDJrcGR5ZDFkaHl4ciJ9.Gj2VU1wvxc7rFVt5
+E4KLOQ
+
+
+const validateListing = (req,res,next) => {
+   let {error} = listingSchema.validate(req.body);
+    console.log(result);
+    if(error){
+      let errMsg = error.details.map((el) => el.message).join(",");
+      throw new ExpressError(400, errMsg);
+    }else{
+      next();
+    }
+
+}
+
+
+// Line-by-line Explanation
+// listingSchema.validate(req.body)
+// → request data ko Joi schema ke according check karta hai
+// error
+// → agar data galat hai to error object milega
+// error.details
+// → array of all validation errors
+// .map(el => el.message)
+// → har error ka message nikalta hai
+// .join(",")
+// → multiple errors ko ek string me convert karta hai
+// throw new ExpressError(400, errMsg)
+// → custom error throw karta hai (Bad Request)
+// next()
+// → agar dat
+// a sahi hai to next middleware ya route execute hota hai
+  
+  
+app.js(chnages by chatgpt)
+
+const express =require("express");
+const app=express();
+const mongoose=require("mongoose");
+const ejsMate = require("ejs-mate");
+const MONGO_URL ="mongodb://127.0.0.1:27017/Wonderlust";
+const methodOverride = require("method-override");
+const wrapAsync = require("./utils/wrapAsync.js")
+const ExpressError = require("./utils/ExpressError.js")
+const {listingSchema , reviewSchema} = require("./schema.js")
+
+const listingRouter=require("./models/listing.js");
+const reviewRouter = require("./models/review.js");
+const userRouter=require("./models/user.js");
+
+
+const cookieParser = require("cookie-parser");
+const session = require("express-session");
+const flash = require("connect-flash");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const User = require("./models/user.js");
+
+
+
+app.use(cookieParser());
+
+const listings = require("./routes/listing.js")
+const reviews = require("./routes/review.js")
+
+const path = require("path");
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride("_method"));
+app.engine("ejs",ejsMate);
+app.use(express.static(path.join(__dirname,"/public")));
+
+const sessionOptions = {
+  secret:"mysupersecretcode",
+  resave:false,
+  saveUninitialized:true,
+  cookie:{
+    expires: Date.now() +7 *24 * 60*60*1000,
+    maxAge:7 *24 * 60*60*1000,
+    httpOnly : true,
+  }
+};
+
+app.get("/", (req ,res)=>{
+    res.send("hii ,Iam root");
+});
+
+app.use(session(sessionOptions));
+app.use(flash());
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.use(new LocalStrategy(User.authenticate()));
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+// demoo user
+app.get("/demouser", async (req, res) => {
+
+    let fakeUser = new User({
+        email: "student@gmail.com",
+        username: "delta-student",
+    });
+
+    let registeredUser = await User.register(fakeUser, "helloworld");
+
+    res.send(registeredUser);
+});
+
+
+// middleware for flash
+app.use((req,res,next)=>{
+  res.locals.success = req.flash("success");
+   res.locals.error = req.flash("error");
+
+  console.log(res.locals.success);
+  next();
+})
+
+
+// router ke method ko work karne ke liye
+
+app.use("/listings",listingRouter);
+app.use("/listings/:id/reviews",reviewRouter);
+app.use("/",userRouter)
+
+
+
+
+main().catch(err => console.log(err));
+
+async function main() {
+  await mongoose.connect(MONGO_URL);
+  console.log("MongoDB connected");
+};
+
+
+// express error dikhna galat route pe jane eke bad
+app.use((req, res, next) => {
+  next(new ExpressError(404, "Page Not Found!"));
+});
+
+// middleware define to handle app.post 
+app.use((err, req, res, next) => {
+  let { statusCode = 500, message = "Something went wrong" } = err;
+  res.status(statusCode).render("Error.ejs",{message});
+  // res.status(statusCode).send(message);
+});
+
+
+app.listen(8080, () =>{
+    console.log("server listening to port 8080");
+});
+
+// index route
+
+// new show se pahle taki new ko id na samje 
+
+// new route
+
+//CREATE ROUTE
+// all data from new add
+// try & catch used for below app.use to solve middleware error ids some value was missing
+
+// app.get("/testListing", async (req, res) => {
+//   let sampleListing = new Listing({
+//     title: "My New Villa",
+//     description: "By the beach",
+//     price: 1200,
+//     location: "Calangute, Goa",
+//     country: "India",
+//   });
+
+//   await sampleListing.save();
+//   console.log("sample was saved");
+//   res.send("successful testing");
+// });
+
+const express = require("express");
+const router = express.Router();
+const wrapAsync = require("../utils/wrapAsync.js");
+const passport = require("passport");
+const { saveRedirectUrl } = require("../middlewares.js");
+const userController = require("../controllers/users.js");
+
+router
+  .route("/signup")
+  .get(userController.renderSignupForm)
+  .post(wrapAsync(userController.signup));
+
+router
+  .route("/login")
+  .get(userController.renderLoginForm)
+  .post(
+    saveRedirectUrl,
+    passport.authenticate("local", {
+      failureRedirect: "/login",
+      failureFlash: true,
+    }),
+    userController.login
+  );
+
+router.get("/logout", userController.logout);
+
+module.exports = router;
+
+
+          <% if(currUser && currUser._id.equals(listing.owner._id)){ %>
+  <% } %>
+
+//Update Route
+router.put("/:id",
+  isLoggedIn,
+  validateListing,
+   wrapAsync(async (req, res) => {
+    
+  let { id } = req.params;
+  if (!listing.owner.equals(res.locals.currUser._id)) {
+
+   req.flash("error", "You don't have permission to edit");
+
+   return res.redirect(`/listings/${id}`);
+}
+  await Listing.findByIdAndUpdate(id, { ...req.body.listing });
+    req.flash("success","listing updated!");
+  res.redirect(`/listings/${id}`);
+}));,/change by chat gpy
+
+
+// IAMMAGE URL
+ <div class="mb-3">
+        <label class="form-label">Image Link</label>
+        <input name="listing[image][url]" 
+          placeholder="enter image URL"
+          type="text" class="form-control" >
+          
+      </div>
+
+
+module.exports.createListing = async (req, res,next) => {
+   let url = req.file.path;
+   let filename = req.file.filename;
+
+  const newListing = new Listing(req.body.listing);
+  newListing.owner = req.user._id;
+  newListing.image = {url ,filename}; 
+  await newListing.save();
+  req.flash("success","new listing created!");
+
+  res.redirect("/listings");
+} chatgpt change for map
+
+<script>
+
+const mapDiv = document.getElementById("map");
+
+const coordinates = JSON.parse(
+  mapDiv.dataset.coordinates
+);
+
+const title = mapDiv.dataset.title;
+
+if(coordinates.length > 0){
+
+const map = L.map('map').setView(
+ [coordinates[1], coordinates[0]],
+ 13
+);
+
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+ attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+L.marker([coordinates[1], coordinates[0]])
+.addTo(map)
+.bindPopup(title)
+.openPopup();
+
+}
+
+</script>
